@@ -1,0 +1,57 @@
+---
+- hosts: all
+  become: True
+  tasks:
+    - name: Installing Git docker httpd and java on RedHat
+      yum:
+        name: "{{item}}"
+        state: present
+      with_items:
+        - git
+        - docker
+        - httpd
+      when: ansible_os_family == "RedHat"
+
+    - name: Installing Git docker httpd and java Ubuntu
+      apt:
+        name: "{{item}}"
+        state: present
+      with_items:
+        - git
+        - docker
+        - apache2
+      when: ansible_os_family == "Debian" 
+    
+    - name: Starting httpd
+      service:
+        name: httpd
+        state: started
+      when: ansible_os_family == "RedHat"
+    - name: Starting apache2
+      service:
+        name: apache2
+        state: started
+      when: ansible_os_family == "Debian"
+    - name: coping index.html
+      copy:
+        src: ./index.html
+        dest: /var/www/html
+      notify: ReStarting httpd
+      when: ansible_os_family == "RedHat"
+    - name: coping index.html
+      copy:
+        src: ./index.html
+        dest: /var/www/html
+      notify: ReStarting apache2
+      when: ansible_os_family == "Debian"
+  handlers:
+    - name: ReStarting httpd
+      service:
+        name: httpd
+        state: restarted
+      when: ansible_os_family == "RedHat"
+    - name: ReStarting apache2
+      service:
+        name: apache2
+        state: restarted
+      when: ansible_os_family == "Debian"

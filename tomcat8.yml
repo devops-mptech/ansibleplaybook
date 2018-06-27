@@ -1,0 +1,67 @@
+---
+- hosts: all
+  become: True
+  tasks:
+    - name: Install Java-1.8.0 on Linux
+      yum:
+        name: java-1.8.0-openjdk-devel
+        state: present
+    - name: Correcting java version
+      alternatives:
+        name: java
+        path: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.171-8.b10.amzn2.x86_64/jre/bin/java
+
+    - name: add group "tomcat"
+      group:
+        name: tomcat
+
+    - name: add user "tomcat"
+      user:
+        name: tomcat
+        group: tomcat
+        home: /usr/share/tomcat
+        createhome: no
+
+    - name: Download Tomcat
+      get_url:
+        url: http://www-us.apache.org/dist/tomcat/tomcat-8/v8.5.31/bin/apache-tomcat-8.5.31.tar.gz
+        dest: /opt/apache-tomcat-8.5.31.tar.gz
+
+    - name: Extract archive
+      command: chdir=/usr/share /bin/tar xvf /opt/apache-tomcat-8.5.31.tar.gz -C /opt/ creates=/opt/apache-tomcat-8.5.31
+    - name: Symlink install directory
+      file: src=/opt/apache-tomcat-8.5.31 path=/usr/share/tomcat state=link
+    - name: changing owner ship of tomcat
+      file: path=/usr/share/tomcat/ owner=tomcat group=tomcat state=directory recurse=yes
+    - name: removing restactions
+      copy:
+        src: ./context.xml
+        dest: /usr/share/tomcat/webapps/manager/META-INF
+      notify: Restarting tomcat
+
+    - name: Configuring users
+      copy:
+        src: ./tomcat-users.xml
+        dest: /usr/share/tomcat/conf
+      notify: Restarting tomcat
+
+    - name: Install Tomcat init script
+      copy: src=./tomcat.sh dest=/etc/init.d/tomcat mode=0755
+      notify: Restarting tomcat
+
+    - name: coping war file to tocmat
+      copy:
+        src: /home/ubuntu/sample-app/target/myapp-0.0.2.war
+        dest: /usr/share/tomcat/webapps
+      notify: Restarting tomcat
+
+    - name: Staring Tomcat8
+      service: 
+        name: tomcat
+        state: started
+        enabled: yes
+  handlers:
+    - name: Restarting tomcat
+      service: 
+        name: tomcat
+        state: restarted

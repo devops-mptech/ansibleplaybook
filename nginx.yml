@@ -1,0 +1,24 @@
+--- 
+- hosts: web01
+  become: True
+  tasks:
+    - name: Installing nginx
+      yum:
+        name: nginx
+        state: present
+    - name: starting and enabling nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+    - name: Coping nginx.conf to nginx server
+      copy:
+        src: ./nginx.conf
+        dest: /etc/nginx
+      notify:
+        - restart nginx
+  handlers:
+    - name: restart nginx
+      service: 
+          name: nginx
+          state: restarted
